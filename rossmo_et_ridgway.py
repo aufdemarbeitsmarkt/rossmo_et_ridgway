@@ -11,7 +11,7 @@ class Rossmo:
 
     default_accuracy = 500
 
-    def __init__(self, coordinates, accuracy=None):
+    def __init__(self, coordinates, accuracy=None, max_distance=None):
         self.coordinates = coordinates
         self.latitudes = [lat for lat,lon in self.coordinates]
         self.longitudes = [lon for lat,lon in self.coordinates]
@@ -19,11 +19,15 @@ class Rossmo:
         if accuracy is None:
             accuracy = self.default_accuracy
         self.accuracy = accuracy
-
+        
+        if max_distance is None:
+            max_distance = self.get_max_distance()
+        self.max_distance = max_distance
+        
         self.rossmo_formula = self.rossmo_formula()
 
         # consider adding f and g in rossmo_formula() as kwargs
-
+    
     def get_max_distance(self):
         '''
         Returns the maximum distance for all crime locations; argument should be the cartesian product of all combinations of locations, derived from get_cartesian_product_of_locations().
@@ -52,7 +56,7 @@ class Rossmo:
         '''
         north, south, east, west = max(self.latitudes), min(self.latitudes), max(self.longitudes), min(self.longitudes)
 
-        distance = self.get_max_distance()
+        distance = self.max_distance
         one_latitude_degree_in_miles = 69
 
         latitude_min_max = (south - (distance / one_latitude_degree_in_miles), north + (distance / one_latitude_degree_in_miles))
@@ -71,7 +75,7 @@ class Rossmo:
         '''
         This uses the N, S, E, W boundaries provided by get_area_of_interest_boundaries().
 
-        Right now, an accuracy of 500, which would be np.linspace(start,stop,num=500), should give us accuracy of ~1mi. (considering latitude). For the purposes of getting this working, this should be sufficient.
+        Right now, an accuracy of 500, which would be np.linspace(start,stop,num=500), should give us accuracy of ~1000ft. (considering latitude). For the purposes of getting this working, this should be sufficient.
 
         Thought: Am I overcomplicating this by using a max_distance in miles?
         '''
