@@ -11,10 +11,17 @@ class Rossmo:
 
     default_accuracy = 500
 
-    def __init__(self, coordinates, accuracy=None, max_distance=None):
+    def __init__(
+        self, 
+        coordinates, 
+        f=0.5, 
+        g=1, 
+        accuracy=None,
+        max_distance=None
+        ):
         self.coordinates = coordinates
-        self.latitudes = [lat for lat,lon in self.coordinates]
-        self.longitudes = [lon for lat,lon in self.coordinates]
+        self.f = f
+        self.g = g
 
         if accuracy is None:
             accuracy = self.default_accuracy
@@ -23,10 +30,15 @@ class Rossmo:
         if max_distance is None:
             max_distance = self.get_max_distance()
         self.max_distance = max_distance
-        
-        self.rossmo_formula = self.rossmo_formula()
 
-        # consider adding f and g in rossmo_formula() as kwargs
+    @property
+    def latitude(self):
+        return [lat for lat,lon in self.coordinates]
+
+    @property
+    def longitude(self):
+        return [lon for lat,lon in self.coordinates]        
+
     
     def get_max_distance(self):
         '''
@@ -46,7 +58,7 @@ class Rossmo:
         Returns min and max latitude and longitude boundaries for the area of interest.
 
         The area of interest taken by:
-        - first getting the the min and max latitudes and longitudes for all crime locations, getting us the corresponding xs and ys for the northernmost, southernmost, easternmost, and westernmost points
+        - first getting the the min and max latitude and longitude for all crime locations, getting us the corresponding xs and ys for the northernmost, southernmost, easternmost, and westernmost points
         - then, we "fan" out from these by getting the max possible distance between all crime locations, get_max_distance()
 
         This assumes that, for example:
@@ -54,7 +66,7 @@ class Rossmo:
 
         69mi for 1º of lat from: https://www.thoughtco.com/degree-of-latitude-and-longitude-distance-4070616
         '''
-        north, south, east, west = max(self.latitudes), min(self.latitudes), max(self.longitudes), min(self.longitudes)
+        north, south, east, west = max(self.latitude), min(self.latitude), max(self.longitude), min(self.longitude)
 
         distance = self.max_distance
         one_latitude_degree_in_miles = 69
@@ -93,18 +105,19 @@ class Rossmo:
         Longitude is the X axis.
         '''
         manhattan = distance.cdist(self.coordinates, self.coordinates, metric='cityblock')
-        buffer = np.median(manhattan)
+        buffer = np.min(manhattan)
         return buffer
 
-    def get_phi(self, manhattan_distance, buffer):
-        return 1 if manhattan_distance > buffer else 0
-
-    def rossmo_formula(self, f=0.5, g=1):
+    @property
+    def rossmo_results(self):
         '''
         • lat, lon coordinates of crime (n in formula)
         • area_of_interest: lat, lon coordinates for which we're trying to get probabilty of residence
         • f & g: The main idea of the formula is that the probability of crimes first increases as one moves through the buffer zone away from the hotzone, but decreases afterwards. The variable f can be chosen so that it works best on data of past crimes. The same idea goes for the variable g.
-        '''
+        ''' 
+        # TODO: 
+        #   - return a DataFrame
+        #   - also return array in proper shape for plotting
         area_of_interest = self.get_area_of_interest()
         rossmo = {}
         B = self.get_buffer()
@@ -112,8 +125,8 @@ class Rossmo:
         for a,i in area_of_interest:
             for lat, lon in self.coordinates:
                 manhattan = distance.cityblock([a,i],[lat, lon])
-                phi = self.get_phi(manhattan_distance=manhattan, buffer=B)
-                p += (phi / abs(manhattan) ** f) + ((1 - phi) * (B ** (g - f)) / ((2 * B) - abs(manhattan)) ** g)
+                phi = 1 if manhattan > B else 0
+                p += (phi / abs(manhattan) ** self.f) + ((1 - phi) * (B ** (self.g - self.f)) / ((2 * B) - abs(manhattan)) ** self.g)
             rossmo[(a,i)] = p
             p = 0
         return rossmo
