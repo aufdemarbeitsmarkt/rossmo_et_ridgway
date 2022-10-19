@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import distance
 
+from mapping_helper_functions import convert_latitude_to_webmercator, convert_longitude_to_webmercator
+
+
 
 class Rossmo:
 
@@ -13,13 +16,21 @@ class Rossmo:
 
     def __init__(
         self, 
-        coordinates, 
+        df_rossmo, 
+        df_additional=None, # for plotting, does not contribute to Rossmo
         f=0.5, 
         g=1, 
         accuracy=None,
         max_distance=None
         ):
-        self.coordinates = coordinates
+
+        self.df_rossmo = self._update_dataframe(df_rossmo)
+        
+        if df_additional is not None:
+            self.df_additional = self._update_dataframe(df_additional)
+        else:
+            self.df_additional = df_additional
+
         self.f = f
         self.g = g
 
@@ -31,14 +42,31 @@ class Rossmo:
             max_distance = self.get_max_distance()
         self.max_distance = max_distance
 
+    def _update_dataframe(self, df_input):
+        '''
+        Concatenates input dataframes & adds additional columns necessary for Rossmo / plotting.
+        '''
+        df_output = pd.concat(df_input)
+
+        df_output['coordinates'] = list(zip(df_output['Y'], df_output['X']))
+        
+        df_output['latitude_webmercator'] = convert_latitude_to_webmercator(df_output['Y'])
+
+        df_output['longitude_webmercator'] = convert_longitude_to_webmercator(df_output['X'])
+
+        return df_output
+
+    @property
+    def coordinates(self):
+        return self.df_rossmo['coordinates'].to_list()
+
     @property
     def latitude(self):
-        return [lat for lat,lon in self.coordinates]
+        return self.df_rossmo['Y'].to_list()
 
     @property
     def longitude(self):
-        return [lon for lat,lon in self.coordinates]        
-
+        return self.df_rossmo['X'].to_list()        
     
     def get_max_distance(self):
         '''
