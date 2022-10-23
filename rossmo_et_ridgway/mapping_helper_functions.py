@@ -1,7 +1,7 @@
 import numpy as np
 
 '''
-This is used to convert latitude and longitude values to Web Mercator values for plotting purposes.
+Used to convert latitude and longitude values to Web Mercator values for plotting purposes.
 ''' 
 
 K = 6378137

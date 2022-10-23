@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import numpy as np
 
 latitudes = np.random.uniform(low=46.000, high=47.000, size=25)

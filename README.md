@@ -1,3 +1,5 @@
 # rossmo_et_ridgway
 
-![rossmo_example](rossmo_et_ridgway/rossmo_example.png)
+![rossmo_example][def]
+
+[def]: rossmo_et_ridgway/rossmo_example.png
