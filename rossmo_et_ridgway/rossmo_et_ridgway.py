@@ -1,37 +1,41 @@
-#!/usr/bin/python3
+from doctest import DocFileCase
+from bokeh.plotting import figure, output_notebook, show
+from bokeh.tile_providers import CARTODBPOSITRON_RETINA, get_provider
+from bokeh.models import HoverTool, ColumnDataSource
+from bokeh.transform import jitter
 from geopy.distance import geodesic
 from geopy import units
 from itertools import product
 import numpy as np
 import pandas as pd
 from scipy.spatial import distance
+from typing import List, Type
 
 from mapping_helper_functions import convert_latitude_to_webmercator, convert_longitude_to_webmercator
-
-
 
 class Rossmo:
 
     default_accuracy = 500
+    default_f = 0.5
+    default_g = 1.0
 
     def __init__(
         self, 
-        df_rossmo, 
-        df_additional=None, # for plotting, does not contribute to Rossmo
-        f=0.5, 
-        g=1, 
+        coordinates,
+        f=None, 
+        g=None, 
         accuracy=None,
         max_distance=None
         ):
 
-        self.df_rossmo = self._update_dataframe(df_rossmo)
-        
-        if df_additional is not None:
-            self.df_additional = self._update_dataframe(df_additional)
-        else:
-            self.df_additional = df_additional
+        self.coordinates = coordinates
 
+        if f is None:
+            f = self.default_f
         self.f = f
+        
+        if g is None:
+            g = self.default_g
         self.g = g
 
         if accuracy is None:
@@ -39,36 +43,43 @@ class Rossmo:
         self.accuracy = accuracy
         
         if max_distance is None:
-            max_distance = self.get_max_distance()
+            max_distance = self._get_max_distance()
         self.max_distance = max_distance
 
-    def _update_dataframe(self, df_input):
+    @classmethod
+    def from_dataframe(
+        cls, 
+        dataframe, 
+        latitude_column='latitude', 
+        longitude_column='longitude',
+        **kwargs
+        ):
         '''
-        Concatenates input dataframes & adds additional columns necessary for Rossmo / plotting.
+        Creates an instance of Rossmo with a list of 1 or more dataframes. 
         '''
-        df_output = pd.concat(df_input)
 
-        df_output['coordinates'] = list(zip(df_output['Y'], df_output['X']))
-        
-        df_output['latitude_webmercator'] = convert_latitude_to_webmercator(df_output['Y'])
+        if len(dataframe) > 1:
+            df_output = pd.concat(dataframe)
+        else: 
+            df_output = dataframe[0]
 
-        df_output['longitude_webmercator'] = convert_longitude_to_webmercator(df_output['X'])
+        df_output['coordinates'] = list(zip(df_output[latitude_column], df_output[longitude_column]))        
+        df_output['latitude_webmercator'] = convert_latitude_to_webmercator(df_output[latitude_column])
+        df_output['longitude_webmercator'] = convert_longitude_to_webmercator(df_output[longitude_column])
 
-        return df_output
+        cls.df = df_output
 
-    @property
-    def coordinates(self):
-        return self.df_rossmo['coordinates'].to_list()
+        return cls(df_output['coordinates'].to_list(), **kwargs)
 
     @property
     def latitude(self):
-        return self.df_rossmo['Y'].to_list()
+        return [lat for lat,lon in self.coordinates]
 
     @property
     def longitude(self):
-        return self.df_rossmo['X'].to_list()        
+        return [lon for lat,lon in self.coordinates]
     
-    def get_max_distance(self):
+    def _get_max_distance(self):
         '''
         Returns the maximum distance for all crime locations; argument should be the cartesian product of all combinations of locations, derived from get_cartesian_product_of_locations().
 
@@ -81,13 +92,13 @@ class Rossmo:
         max_distance = max(distances)
         return max_distance
 
-    def get_area_of_interest_boundaries(self):
+    def _get_area_of_interest_boundaries(self):
         '''
         Returns min and max latitude and longitude boundaries for the area of interest.
 
         The area of interest taken by:
         - first getting the the min and max latitude and longitude for all crime locations, getting us the corresponding xs and ys for the northernmost, southernmost, easternmost, and westernmost points
-        - then, we "fan" out from these by getting the max possible distance between all crime locations, get_max_distance()
+        - then, we "fan" out from these by getting the max possible distance between all crime locations, _get_max_distance()
 
         This assumes that, for example:
         If the maximum distance between the list of all crime locations is 100 miles, then the criminal resides within 100 miles of the northernmost, southernmost, easternmost, or westernmost committed crime.
@@ -111,15 +122,15 @@ class Rossmo:
 
         return boundaries
 
-    def get_area_of_interest(self):
+    def _get_area_of_interest(self):
         '''
-        This uses the N, S, E, W boundaries provided by get_area_of_interest_boundaries().
+        This uses the N, S, E, W boundaries provided by _get_area_of_interest_boundaries().
 
-        Right now, an accuracy of 500, which would be np.linspace(start,stop,num=500), should give us accuracy of ~1000ft. (considering latitude). For the purposes of getting this working, this should be sufficient.
+        Example: an accuracy of 500, gives us a granularity of ~1000ft (considering latitude). 
 
         Thought: Am I overcomplicating this by using a max_distance in miles?
         '''
-        latitude_min_max, longitude_min_max = self.get_area_of_interest_boundaries()
+        latitude_min_max, longitude_min_max = self._get_area_of_interest_boundaries()
         latitude_range = np.linspace(latitude_min_max[0], latitude_min_max[1], num=self.accuracy)
         longitude_range = np.linspace(longitude_min_max[0], longitude_min_max[1], num=self.accuracy)
 
@@ -127,7 +138,7 @@ class Rossmo:
 
         return area_of_interest
 
-    def get_buffer(self):
+    def _get_buffer(self):
         '''
         Latitude is the Y axis.
         Longitude is the X axis.
@@ -142,13 +153,11 @@ class Rossmo:
         • lat, lon coordinates of crime (n in formula)
         • area_of_interest: lat, lon coordinates for which we're trying to get probabilty of residence
         • f & g: The main idea of the formula is that the probability of crimes first increases as one moves through the buffer zone away from the hotzone, but decreases afterwards. The variable f can be chosen so that it works best on data of past crimes. The same idea goes for the variable g.
-        ''' 
-        # TODO: 
-        #   - return a DataFrame
-        #   - also return array in proper shape for plotting
-        area_of_interest = self.get_area_of_interest()
+        https://en.wikipedia.org/wiki/Rossmo%27s_formula#Explanation
+        '''
+        area_of_interest = self._get_area_of_interest()
         rossmo = {}
-        B = self.get_buffer()
+        B = self._get_buffer()
         p = 0
         for a,i in area_of_interest:
             for lat, lon in self.coordinates:
@@ -158,3 +167,145 @@ class Rossmo:
             rossmo[(a,i)] = p
             p = 0
         return rossmo
+
+    @property
+    def df_rossmo_results(self): 
+        # TODO: specify dtypes
+        output_df = pd.DataFrame({'coordinates': self.rossmo_results.keys(), 'score': self.rossmo_results.values()})
+
+        output_df[['latitude', 'longitude']] = pd.DataFrame(output_df['coordinates'].tolist(), index=output_df.index)
+        output_df['score_normalized'] = (
+            (output_df['score'] - output_df['score'].min()) / (output_df['score'].max() - output_df['score'].min())
+            ) 
+
+        return output_df
+
+
+class RossmoPlot:
+
+    def __init__(
+        self, 
+        rossmo_class: Type[Rossmo],
+        plotting_dataframe: List[pd.DataFrame],
+        aliases=None
+        ):
+        self.rossmo_class = rossmo_class
+        self.df_rossmo_results = self.rossmo_class.df_rossmo_results # should I use inheritance here? simply assigning the variable here seems more straightforward
+        self.plotting_dataframe = plotting_dataframe
+
+        if aliases is None:
+            aliases = [f'{df}' for df in self.plotting_dataframe]
+        self.aliases = aliases
+
+    def _check_update_coordinates_column(self):
+        '''
+        Check to ensure the plotting_dataframe has 'coordinates' column. If not, add it.
+        '''
+        for df in self.plotting_dataframe: 
+            if 'coordinates' not in df.columns:
+                df['coordinates'] = list(zip(df['latitude'], df['longitude']))
+
+    def _set_below_percentile_to_zero(self, percentile='25%'):
+        stats = self.df_rossmo_results['score'].describe()
+        self.df_rossmo_results.loc[self.df_rossmo_results['score'] <= stats[percentile], ['score_normalized']] = 0.0
+
+    def _convert_to_webmercator(self):
+        self._check_update_coordinates_column()
+
+        for df in [self.df_rossmo_results] + self.plotting_dataframe:
+            df['latitude_webmercator'] = convert_latitude_to_webmercator(df['latitude'])
+            df['longitude_webmercator'] = convert_longitude_to_webmercator(df['longitude'])
+    
+    @property
+    def nd_score_array(self):
+        return np.fliplr(
+            self.df_rossmo_results['score_normalized']\
+            .to_numpy()\
+            .reshape((self.rossmo_class.accuracy, self.rossmo_class.accuracy))
+            )  
+
+    @property
+    def x_range(self):
+        return self.df_rossmo_results['longitude_webmercator'].min(), self.df_rossmo_results['longitude_webmercator'].max()
+
+    @property
+    def y_range(self):
+        return self.df_rossmo_results['latitude_webmercator'].min(), self.df_rossmo_results['latitude_webmercator'].max()
+
+
+    def set_hover_details(self, names, tooltips):
+        hover_details = HoverTool(
+                names=names,
+                tooltips=tooltips
+            )
+        self._hover_details = hover_details
+        return self._hover_details
+
+    def _prepare_plot(self):
+        self._set_below_percentile_to_zero()
+        self._convert_to_webmercator()
+
+    def create_plot(self):
+        self._prepare_plot()
+
+        tile_provider = get_provider(CARTODBPOSITRON_RETINA)
+
+        try:
+            hover = self._hover_details
+        except AttributeError: 
+            names = self.aliases
+            tooltips=[
+                ('name', '@name'),
+                ('coordinates', '@coordinates'),
+                ('description', '@description')
+            ]
+            hover = self.set_hover_details(names=names, tooltips=tooltips)
+
+        # generate a figure for the plot
+        self.plot = figure(
+            x_range=self.x_range,
+            y_range=self.y_range,
+            x_axis_type='mercator',
+            y_axis_type='mercator',
+            tools=['pan', 'wheel_zoom', 'save', 'reset', hover],
+            lod_threshold=None
+        )
+
+        # add the map tile
+        self.plot.add_tile(tile_provider)
+
+        # plot the heatmap (the rossmo results)
+        self.plot.image(
+            image=[self.nd_score_array],
+            x=self.x_range[0],
+            y=self.y_range[0],
+            dw=abs(self.x_range[1] - self.x_range[0]),
+            dh=abs(self.y_range[1] - self.y_range[0]),
+            palette='Spectral10',
+            alpha=0.7
+        )
+
+        colors = ['blue', 'black', 'green']
+
+        # plot from the plotting dataframes
+        for df, alias, color in zip(self.plotting_dataframe, self.aliases, colors):
+            source = ColumnDataSource(df)
+            self.plot.circle(
+                x=jitter('longitude_webmercator', 0.05),
+                y=jitter('latitude_webmercator', 0.05),
+                radius=150,
+                fill_color=color,
+                line_color='black',
+                line_alpha=0.8,
+                legend_label=alias,
+                source=source,
+                name=alias
+            )
+        
+        # set legend policy
+        self.plot.legend.click_policy='hide'
+
+    def show_plot(self, output_destination=None):
+        if output_destination is None:
+            output_notebook()
+        show(self.plot)
