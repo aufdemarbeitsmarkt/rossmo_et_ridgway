@@ -246,6 +246,7 @@ class RossmoPlot:
         self._convert_to_webmercator()
 
     def create_plot(self):
+        # TODO: add the hover details, plotting args so the user can customize their plot
         self._prepare_plot()
 
         tile_provider = get_provider(CARTODBPOSITRON_RETINA)
