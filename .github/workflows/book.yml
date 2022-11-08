@@ -8,6 +8,7 @@ on:
 
 # this job installs dependencies, builds the book, and pushes it to `gh-pages`
 jobs:
+  - uses: 'node16'
   deploy-book:
     runs-on: ubuntu-latest
     steps:
