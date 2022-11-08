@@ -1,4 +1,3 @@
-from doctest import DocFileCase
 from bokeh.plotting import figure, output_notebook, show
 from bokeh.tile_providers import CARTODBPOSITRON_RETINA, get_provider
 from bokeh.models import HoverTool, ColumnDataSource
