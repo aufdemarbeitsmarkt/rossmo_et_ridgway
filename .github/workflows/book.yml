@@ -26,7 +26,7 @@ jobs:
     # build the book
     - name: Build the book
       run: |
-        jupyter-book build .
+        jupyter-book build rossmo_et_ridgway/rossmo_et_ridgway.ipynb
 
     # bush the book's HTML to github-pages
     - name: GitHub Pages action
