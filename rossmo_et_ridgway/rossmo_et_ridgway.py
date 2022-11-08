@@ -139,10 +139,6 @@ class Rossmo:
         return area_of_interest
 
     def _get_buffer(self):
-        '''
-        Latitude is the Y axis.
-        Longitude is the X axis.
-        '''
         manhattan = distance.cdist(self.coordinates, self.coordinates, metric='cityblock')
         buffer = np.min(manhattan)
         return buffer
@@ -224,6 +220,10 @@ class RossmoPlot:
             .reshape((self.rossmo_class.accuracy, self.rossmo_class.accuracy))
             )  
 
+    def _prepare_range(self):
+        # find argmax, then fan out x% based on the accuracy argument's value
+        pass
+
     @property
     def x_range(self):
         return self.df_rossmo_results['longitude_webmercator'].min(), self.df_rossmo_results['longitude_webmercator'].max()
@@ -232,35 +232,39 @@ class RossmoPlot:
     def y_range(self):
         return self.df_rossmo_results['latitude_webmercator'].min(), self.df_rossmo_results['latitude_webmercator'].max()
 
-
-    def set_hover_details(self, names, tooltips):
-        hover_details = HoverTool(
-                names=names,
-                tooltips=tooltips
-            )
-        self._hover_details = hover_details
-        return self._hover_details
-
     def _prepare_plot(self):
         self._set_below_percentile_to_zero()
         self._convert_to_webmercator()
 
-    def create_plot(self):
-        # TODO: add the hover details, plotting args so the user can customize their plot
+    def create_plot(
+        self,
+        legend_labels,
+        fill_colors,
+        plot_width=1080,
+        plot_height=1080,
+        tools=None,
+        hover_details=None,
+        heatmap_palette='Spectral10',
+        heatmap_alpha=0.6,
+        line_color='black',
+        line_alpha=0.25,
+        radius=200
+        ):
         self._prepare_plot()
 
         tile_provider = get_provider(CARTODBPOSITRON_RETINA)
 
-        try:
-            hover = self._hover_details
-        except AttributeError: 
-            names = self.aliases
+        if hover_details is None:
             tooltips=[
                 ('name', '@name'),
                 ('coordinates', '@coordinates'),
-                ('description', '@description')
+                ('date', '@date'),
+                ('notes', '@notes')
             ]
-            hover = self.set_hover_details(names=names, tooltips=tooltips)
+            hover = HoverTool(
+                names=legend_labels,
+                tooltips=tooltips
+            )
 
         # generate a figure for the plot
         self.plot = figure(
@@ -268,7 +272,7 @@ class RossmoPlot:
             y_range=self.y_range,
             x_axis_type='mercator',
             y_axis_type='mercator',
-            tools=['pan', 'wheel_zoom', 'save', 'reset', hover],
+            tools=['pan', 'wheel_zoom', 'save', 'reset', hover] if tools is None else tools,
             lod_threshold=None
         )
 
@@ -282,25 +286,23 @@ class RossmoPlot:
             y=self.y_range[0],
             dw=abs(self.x_range[1] - self.x_range[0]),
             dh=abs(self.y_range[1] - self.y_range[0]),
-            palette='Spectral10',
-            alpha=0.7
+            palette=heatmap_palette,
+            alpha=heatmap_alpha
         )
 
-        colors = ['blue', 'black', 'green']
-
         # plot from the plotting dataframes
-        for df, alias, color in zip(self.plotting_dataframe, self.aliases, colors):
+        for df, label, color in zip(self.plotting_dataframe, legend_labels, fill_colors):
             source = ColumnDataSource(df)
             self.plot.circle(
                 x=jitter('longitude_webmercator', 0.05),
                 y=jitter('latitude_webmercator', 0.05),
-                radius=150,
+                radius=radius,
                 fill_color=color,
-                line_color='black',
-                line_alpha=0.8,
-                legend_label=alias,
+                line_color=line_color,
+                line_alpha=line_alpha,
+                legend_label=label,
                 source=source,
-                name=alias
+                name=label
             )
         
         # set legend policy

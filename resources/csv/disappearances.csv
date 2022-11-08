@@ -1,4 +1,4 @@
-longitude,latitude,name,description
+X,Y,Name,description
 -122.2944856,47.4355394,Alma Ann Smith,
 -122.304973,47.6129248,Andrea Marion Childers,
 -122.2702954,47.5369542,April Dawn Buttram,
@@ -35,7 +35,6 @@ longitude,latitude,name,description
 -122.2840507,47.4788341,Patricia Michelle Barczak,
 -122.3320708,47.6062095,Patricia Yellowrobe,
 -122.3400709,47.608863,Roberta Joseph Hayes,
--122.344512,47.6942074,Sandra Denise Major,
 -122.2841662,47.4757689,Sandra Kay Gabbert,
 -122.2971602,47.384057,Shawnda Lee Summers,
 -122.3239762,47.5987122,Shirley Marie Sherrill,

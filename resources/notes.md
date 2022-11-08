@@ -1,0 +1,1 @@
+Use https://mygeodata.cloud for converting kmz to csv.
