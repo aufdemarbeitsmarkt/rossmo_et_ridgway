@@ -311,3 +311,4 @@ class RossmoPlot:
         if output_destination is None:
             output_notebook()
         show(self.plot)
+        return self.plot
