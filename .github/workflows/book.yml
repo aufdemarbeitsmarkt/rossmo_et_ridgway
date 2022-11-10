@@ -23,18 +23,12 @@ jobs:
       run: |
         pip install -r requirements.txt
 
-    # - name: create branch
-    #   uses: peterjgrainger/action-create-branch@v2.2.0
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     branch: 'release-notes'
-
     # build the book
     - name: build the book
       run: |
         jupyter-book build .
 
+    # install ghp-import & run the command to create + push to gh-pages branch
     - name: install ghp-import
       run: |
         pip install ghp-import
@@ -42,10 +36,3 @@ jobs:
     - name: run ghp-import
       run: |
         ghp-import -n -p -f ./_build/html
-
-    # push the book's HTML to github-pages (https://github.com/peaceiris/actions-gh-pages)
-    # - name: github pages action
-    #   uses: peaceiris/actions-gh-pages@v3
-    #   with:
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     publish_dir: ./_build/html
