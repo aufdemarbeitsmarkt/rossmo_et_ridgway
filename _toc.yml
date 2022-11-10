@@ -1,0 +1,4 @@
+format: jb-book
+root: index
+chapters:
+- file: rossmo_et_ridgway/rossmo_et_ridgway.ipynb
