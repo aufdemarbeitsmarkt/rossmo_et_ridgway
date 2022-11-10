@@ -14,23 +14,38 @@ jobs:
     - uses: actions/checkout@v3
 
     # install dependencies
-    - name: Set up Python 3.8
+    - name: set up python 3.8
       uses: actions/setup-python@v3
       with:
         python-version: 3.8
 
-    - name: Install dependencies
+    - name: install dependencies
       run: |
         pip install -r requirements.txt
 
+    # - name: create branch
+    #   uses: peterjgrainger/action-create-branch@v2.2.0
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     branch: 'release-notes'
+
     # build the book
-    - name: Build the book
+    - name: build the book
       run: |
         jupyter-book build rossmo_et_ridgway/rossmo_et_ridgway.ipynb
 
-    # bush the book's HTML to github-pages
-    - name: GitHub Pages action
-      uses: peaceiris/actions-gh-pages@v3.6.1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./_build/html
+    - name: install ghp-import
+      run: |
+        pip install ghp-import
+
+    - name: run ghp-import
+      run: |
+        ghp-import -n -p -f _build/html
+
+    # push the book's HTML to github-pages (https://github.com/peaceiris/actions-gh-pages)
+    # - name: github pages action
+    #   uses: peaceiris/actions-gh-pages@v3
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     publish_dir: ./_build/html
