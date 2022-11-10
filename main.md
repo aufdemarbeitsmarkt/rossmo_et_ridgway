@@ -12,3 +12,8 @@
 
 ```{glue:} df_ridgway_final
 ```
+
+---
+
+```{glue:} ridgway_map
+```
