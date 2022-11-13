@@ -1,16 +1,19 @@
-from bokeh.plotting import figure, output_notebook, show
-from bokeh.tile_providers import CARTODBPOSITRON_RETINA, get_provider
-from bokeh.models import HoverTool, ColumnDataSource
-from bokeh.transform import jitter
-from geopy.distance import geodesic
-from geopy import units
 from itertools import product
-import numpy as np
-import pandas as pd
-from scipy.spatial import distance
 from typing import List, Type
 
-from mapping_helper_functions import convert_latitude_to_webmercator, convert_longitude_to_webmercator
+from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.plotting import figure, output_file, output_notebook, show
+from bokeh.tile_providers import CARTODBPOSITRON_RETINA, get_provider
+from bokeh.transform import jitter
+from geopy import units
+from geopy.distance import geodesic
+import numpy as np
+from scipy.spatial import distance
+import pandas as pd
+
+from mapping_helper_functions import (convert_latitude_to_webmercator,
+                                      convert_longitude_to_webmercator)
+
 
 class Rossmo:
 
@@ -22,7 +25,8 @@ class Rossmo:
         self, 
         coordinates,
         f=None, 
-        g=None, 
+        g=None,
+        buffer=None,
         accuracy=None,
         max_distance=None
         ):
@@ -36,6 +40,10 @@ class Rossmo:
         if g is None:
             g = self.default_g
         self.g = g
+
+        if buffer is None:
+            buffer = self._get_buffer()
+        self.buffer = buffer
 
         if accuracy is None:
             accuracy = self.default_accuracy
@@ -117,9 +125,9 @@ class Rossmo:
 
         longitude_min_max = (east + (distance / one_longitude_degree_in_miles_min), west - (distance / one_longitude_degree_in_miles_max))
 
-        boundaries = (latitude_min_max, longitude_min_max)
+        self.area_of_interest_boundaries = boundaries = (latitude_min_max, longitude_min_max)
 
-        return boundaries
+        return self.area_of_interest_boundaries
 
     def _get_area_of_interest(self):
         '''
@@ -134,9 +142,14 @@ class Rossmo:
         longitude_range = np.linspace(longitude_min_max[0], longitude_min_max[1], num=self.accuracy)
 
         area_of_interest = product(latitude_range,longitude_range)
-
         return area_of_interest
 
+    # TODO: delete this property
+    @property
+    def aoi(self):
+        return self._get_area_of_interest()
+
+    # TODO: change this to first argument that is > 0
     def _get_buffer(self):
         manhattan = distance.cdist(self.coordinates, self.coordinates, metric='cityblock')
         buffer = np.min(manhattan)
@@ -163,6 +176,24 @@ class Rossmo:
             p = 0
         return rossmo
 
+    # @property
+    # def rossmo_results(self):
+    #     '''
+    #     • lat, lon coordinates of crime (n in formula)
+    #     • area_of_interest: lat, lon coordinates for which we're trying to get probabilty of residence
+    #     • f & g: The main idea of the formula is that the probability of crimes first increases as one moves through the buffer zone away from the hotzone, but decreases afterwards. The variable f can be chosen so that it works best on data of past crimes. The same idea goes for the variable g.
+    #     https://en.wikipedia.org/wiki/Rossmo%27s_formula#Explanation
+    #     '''
+    #     area_of_interest = list(self._get_area_of_interest()) # converting this to list should solve the problem.
+    #     manhattan = distance.cdist(area_of_interest, self.coordinates, metric='cityblock')
+    #     phi = manhattan > self.buffer
+
+    #     rossmo_formula = (phi / abs(manhattan) ** self.f) + ((1 - phi) * (self.buffer ** (self.g - self.f)) / ((2 * self.buffer) - abs(manhattan)) ** self.g)
+
+    #     rossmo_results_summed = np.sum(rossmo_formula, axis=1)
+
+    #     return {k:v for k,v in zip(area_of_interest, rossmo_results_summed)}
+
     @property
     def df_rossmo_results(self): 
         # TODO: specify dtypes
@@ -172,7 +203,6 @@ class Rossmo:
         output_df['score_normalized'] = (
             (output_df['score'] - output_df['score'].min()) / (output_df['score'].max() - output_df['score'].min())
             ) 
-
         return output_df
 
 
@@ -182,15 +212,12 @@ class RossmoPlot:
         self, 
         rossmo_class: Type[Rossmo],
         plotting_dataframe: List[pd.DataFrame],
-        aliases=None
+        set_score_array=None # manually define the score array, if desired; should probably make this a method 
         ):
         self.rossmo_class = rossmo_class
-        self.df_rossmo_results = self.rossmo_class.df_rossmo_results # should I use inheritance here? simply assigning the variable here seems more straightforward
+        self.df_rossmo_results = self.rossmo_class.df_rossmo_results # should I use inheritance here? simply assigning the variable here seems more straightforward, though
         self.plotting_dataframe = plotting_dataframe
-
-        if aliases is None:
-            aliases = [f'{df}' for df in self.plotting_dataframe]
-        self.aliases = aliases
+        self.set_score_array = set_score_array
 
     def _check_update_coordinates_column(self):
         '''
@@ -210,18 +237,17 @@ class RossmoPlot:
         for df in [self.df_rossmo_results] + self.plotting_dataframe:
             df['latitude_webmercator'] = convert_latitude_to_webmercator(df['latitude'])
             df['longitude_webmercator'] = convert_longitude_to_webmercator(df['longitude'])
-    
-    @property
-    def nd_score_array(self):
-        return np.fliplr(
-            self.df_rossmo_results['score_normalized']\
-            .to_numpy()\
-            .reshape((self.rossmo_class.accuracy, self.rossmo_class.accuracy))
-            )  
 
-    def _prepare_range(self):
-        # find argmax, then fan out x% based on the accuracy argument's value
-        pass
+    @property
+    def score_array(self):
+        if self.set_score_array is None:
+            return np.fliplr(
+                self.df_rossmo_results['score_normalized']\
+                .to_numpy()\
+                .reshape((self.rossmo_class.accuracy, self.rossmo_class.accuracy))
+            )
+        else:
+            return self.set_score_array
 
     @property
     def x_range(self):
@@ -244,9 +270,10 @@ class RossmoPlot:
         tools=None,
         hover_details=None,
         heatmap_palette='Spectral10',
-        heatmap_alpha=0.6,
+        heatmap_alpha=0.5,
         line_color='black',
         line_alpha=0.25,
+        fill_alpha=0.6,
         radius=200
         ):
         self._prepare_plot()
@@ -280,7 +307,7 @@ class RossmoPlot:
 
         # plot the heatmap (the rossmo results)
         self.plot.image(
-            image=[self.nd_score_array],
+            image=[self.score_array],
             x=self.x_range[0],
             y=self.y_range[0],
             dw=abs(self.x_range[1] - self.x_range[0]),
@@ -297,6 +324,7 @@ class RossmoPlot:
                 y=jitter('latitude_webmercator', 0.05),
                 radius=radius,
                 fill_color=color,
+                fill_alpha=fill_alpha,
                 line_color=line_color,
                 line_alpha=line_alpha,
                 legend_label=label,
@@ -307,8 +335,9 @@ class RossmoPlot:
         # set legend policy
         self.plot.legend.click_policy='hide'
 
-    def show_plot(self, output_destination=None):
-        if output_destination is None:
+    def show_plot(self, output_to_notebook=True, output_html=False, html_filename=None, html_title=None):
+        if output_to_notebook:
             output_notebook()
+        if output_html:
+            output_file(filename=f'maps/{html_filename}.html', title=html_title)
         show(self.plot)
-        return self.plot
