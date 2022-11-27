@@ -1,7 +1,6 @@
 format: jb-article
 root: intro
 sections:
-- file: intro
 - file: application_of_rossmo_formula
 - file: future_considerations
 - file: data
