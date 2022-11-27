@@ -18,7 +18,7 @@ from mapping_helper_functions import (convert_latitude_to_webmercator,
 class Rossmo:
 
     default_accuracy = 500
-    default_f = 0.5
+    default_f = 1.0
     default_g = 1.0
 
     def __init__(
@@ -134,8 +134,6 @@ class Rossmo:
         This uses the N, S, E, W boundaries provided by _get_area_of_interest_boundaries().
 
         Example: an accuracy of 500, gives us a granularity of ~1000ft (considering latitude). 
-
-        Thought: Am I overcomplicating this by using a max_distance in miles?
         '''
         latitude_min_max, longitude_min_max = self._get_area_of_interest_boundaries()
         latitude_range = np.linspace(latitude_min_max[0], latitude_min_max[1], num=self.accuracy)
@@ -144,15 +142,9 @@ class Rossmo:
         area_of_interest = product(latitude_range,longitude_range)
         return area_of_interest
 
-    # TODO: delete this property
-    @property
-    def aoi(self):
-        return self._get_area_of_interest()
-
-    # TODO: change this to first argument that is > 0
     def _get_buffer(self):
         manhattan = distance.cdist(self.coordinates, self.coordinates, metric='cityblock')
-        buffer = np.min(manhattan)
+        buffer = np.min(manhattan[manhattan > 0])
         return buffer
 
     @property
@@ -163,36 +155,15 @@ class Rossmo:
         • f & g: The main idea of the formula is that the probability of crimes first increases as one moves through the buffer zone away from the hotzone, but decreases afterwards. The variable f can be chosen so that it works best on data of past crimes. The same idea goes for the variable g.
         https://en.wikipedia.org/wiki/Rossmo%27s_formula#Explanation
         '''
-        area_of_interest = self._get_area_of_interest()
-        rossmo = {}
-        B = self._get_buffer()
-        p = 0
-        for a,i in area_of_interest:
-            for lat, lon in self.coordinates:
-                manhattan = distance.cityblock([a,i],[lat, lon])
-                phi = 1 if manhattan > B else 0
-                p += (phi / abs(manhattan) ** self.f) + ((1 - phi) * (B ** (self.g - self.f)) / ((2 * B) - abs(manhattan)) ** self.g)
-            rossmo[(a,i)] = p
-            p = 0
-        return rossmo
+        area_of_interest = list(self._get_area_of_interest())
+        manhattan = distance.cdist(area_of_interest, self.coordinates, metric='cityblock')
+        phi = manhattan > self.buffer
 
-    # @property
-    # def rossmo_results(self):
-    #     '''
-    #     • lat, lon coordinates of crime (n in formula)
-    #     • area_of_interest: lat, lon coordinates for which we're trying to get probabilty of residence
-    #     • f & g: The main idea of the formula is that the probability of crimes first increases as one moves through the buffer zone away from the hotzone, but decreases afterwards. The variable f can be chosen so that it works best on data of past crimes. The same idea goes for the variable g.
-    #     https://en.wikipedia.org/wiki/Rossmo%27s_formula#Explanation
-    #     '''
-    #     area_of_interest = list(self._get_area_of_interest()) # converting this to list should solve the problem.
-    #     manhattan = distance.cdist(area_of_interest, self.coordinates, metric='cityblock')
-    #     phi = manhattan > self.buffer
+        rossmo_formula = (phi / abs(manhattan) ** self.f) + ((1 - phi) * (self.buffer ** (self.g - self.f)) / ((2 * self.buffer) - abs(manhattan)) ** self.g)
 
-    #     rossmo_formula = (phi / abs(manhattan) ** self.f) + ((1 - phi) * (self.buffer ** (self.g - self.f)) / ((2 * self.buffer) - abs(manhattan)) ** self.g)
+        rossmo_results_summed = np.sum(rossmo_formula, axis=1)
 
-    #     rossmo_results_summed = np.sum(rossmo_formula, axis=1)
-
-    #     return {k:v for k,v in zip(area_of_interest, rossmo_results_summed)}
+        return {k:v for k,v in zip(area_of_interest, rossmo_results_summed)}
 
     @property
     def df_rossmo_results(self): 
