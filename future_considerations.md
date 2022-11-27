@@ -1,6 +1,5 @@
 # Future Considerations 
 
-
 Future considerations:
 - address `RuntimeWarning: invalid value encountered in double_scalars` when using non-default values for `f` and `g` 
 - radius / size of plot points 

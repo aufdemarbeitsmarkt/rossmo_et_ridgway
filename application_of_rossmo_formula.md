@@ -4,21 +4,21 @@ _Get the avg distance between points using the 2000 "accuracy" score._
 
 ---
 
-### Map One
+## Map One
 ```{raw} html
 :file: rossmo_et_ridgway/maps/map_one.html
 ```
 
 ---
 
-### Map Two
+## Map Two
 ```{raw} html
 :file: rossmo_et_ridgway/maps/map_two.html
 ```
 
 ---
 
-### Map Three
+## Map Three
 ```{raw} html
 :file: rossmo_et_ridgway/maps/map_three.html
 ```
