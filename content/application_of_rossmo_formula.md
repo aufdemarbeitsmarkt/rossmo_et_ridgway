@@ -3,7 +3,7 @@
 ## Map One
 
 ```{raw} html
-:file: rossmo_et_ridgway/maps/map_one.html
+:file: ../rossmo_et_ridgway/maps/map_one.html
 ```
 
 _**Generated using both disappearance and body dumpsite locations for a total of 91 crime locations.**_
@@ -12,14 +12,14 @@ _**Generated using both disappearance and body dumpsite locations for a total of
 
 
 ```{raw} html
-:file: rossmo_et_ridgway/maps/map_two.html
+:file: ../rossmo_et_ridgway/maps/map_two.html
 ```
 
 _**Generated using body dumpsite locations for a total of 48 crimes locations**_
 
 ## Map Three
 ```{raw} html
-:file: rossmo_et_ridgway/maps/map_three.html
+:file: ../rossmo_et_ridgway/maps/map_three.html
 ```
 
 _**Generated using disappearance locations for a total of 43 crimes locations**_
