@@ -1,7 +1,7 @@
 format: jb-book
 root: introduction
 chapters:
-- file: application_of_rossmo_formula
-- file: future_considerations
-- file: data
-- file: citations
+- file: content/application_of_rossmo_formula
+- file: content/future_iterations
+- file: content/data
+- file: content/citations

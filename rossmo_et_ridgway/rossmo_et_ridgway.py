@@ -89,8 +89,6 @@ class Rossmo:
     def _get_max_distance(self):
         '''
         Returns the maximum distance for all crime locations; argument should be the cartesian product of all combinations of locations, derived from get_cartesian_product_of_locations().
-
-         # possibly use scipy.distance.cdist instead.
         '''
         cartesian_product_of_coordinates = product(self.coordinates, repeat=2)
         distances = []
@@ -132,8 +130,6 @@ class Rossmo:
     def _get_area_of_interest(self):
         '''
         This uses the N, S, E, W boundaries provided by _get_area_of_interest_boundaries().
-
-        Example: an accuracy of 500, gives us a granularity of ~1000ft (considering latitude). 
         '''
         latitude_min_max, longitude_min_max = self._get_area_of_interest_boundaries()
         latitude_range = np.linspace(latitude_min_max[0], latitude_min_max[1], num=self.accuracy)

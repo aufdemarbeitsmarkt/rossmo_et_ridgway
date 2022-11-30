@@ -9,5 +9,5 @@
 
 --- 
 
-While not explicitly cited, the following were used as resources / assistance:
+While not explicitly cited, the following was used as a resource.
 - https://jeremykun.com/2011/07/20/serial-killers/

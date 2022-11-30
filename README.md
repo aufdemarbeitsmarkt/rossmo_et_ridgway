@@ -1,3 +1,5 @@
 # rossmo_et_ridgway
 
-**REPOSITORY FOR TESTING GITHUB ACTIONS**
+## rossmo et ridgway: an application of rossmo's formula
+
+Results can be directly accessed [here](https://aufdemarbeitsmarkt.github.io/rossmo_et_ridgway_/application_of_rossmo_formula.html).
