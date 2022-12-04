@@ -1,0 +1,6 @@
+format: jb-book
+root: introduction
+chapters:
+- file: application_of_rossmo_formula
+- file: data
+- file: citations
