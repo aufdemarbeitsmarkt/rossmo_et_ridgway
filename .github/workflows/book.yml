@@ -26,7 +26,7 @@ jobs:
     # build the book
     - name: build the book
       run: |
-        jupyter-book build .
+        jupyter-book build content
 
     # install ghp-import & run the command to create + push to gh-pages branch
     - name: install ghp-import
