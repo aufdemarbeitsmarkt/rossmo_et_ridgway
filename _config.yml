@@ -5,5 +5,5 @@ author: Tim
 repository: 
   url: "https://github.com/aufdemarbeitsmarkt/rossmo_et_ridgway"
 
-  execute:
-    timeout: -1
+execute:
+  timeout: -1

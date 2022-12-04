@@ -17,5 +17,5 @@ which resulted in a distorted target pattern
 - move calculations into a distinct repo / project, separate from a specific implementation (this repo)
 - adjust size of plot points; right now, their display leaves a bit to be desired (they're too small when zoomed out). Bokeh seems limited in its ability to support dynamic glyph sizes based on Zoom.
 - address version conflicts with `nbclient` and `jupyter_client`; it's been super finnicky to get the book to consistently update without errors
-- varying values for `f` and `g` are not readily supported; in many cases, users will run into `RuntimeWarning: invalid value encountered in double_scalars` due to infinitesimal small values
+- varying values for `f` and `g` are not readily supported; in many cases, users will run into `RuntimeWarning: invalid value encountered in double_scalars` due to infinitesimally small values
 - cleanup / add more type hinting

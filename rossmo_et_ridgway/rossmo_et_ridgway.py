@@ -53,6 +53,7 @@ class Rossmo:
             max_distance = self._get_max_distance()
         self.max_distance = max_distance
 
+    # TODO: *args would be more clear instead of checking the length of the dataframe argument
     @classmethod
     def from_dataframe(
         cls, 
