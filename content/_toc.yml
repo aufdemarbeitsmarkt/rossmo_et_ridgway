@@ -2,5 +2,10 @@ format: jb-book
 root: introduction
 chapters:
 - file: application_of_rossmo_formula
+  sections:
+  - file: application_of_rossmo_formula__one
+  - file: application_of_rossmo_formula__two
+  - file: application_of_rossmo_formula__three
+  - file: application_of_rossmo_formula__notes
 - file: data
 - file: citations

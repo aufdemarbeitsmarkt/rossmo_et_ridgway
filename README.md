@@ -8,6 +8,7 @@ Results can be directly accessed [here](https://aufdemarbeitsmarkt.github.io/ros
 
 ## Future Improvements / TODOs
 
+- create a way to score results, i.e. can we assess how well the algorithm identified a known serial criminal's residence / place of work
 - allow for "confidence" of location, e.g. some of the disappearance locations are "last seen in the Seattle area" (Patricia Yellowrobe)
 - compensate score values for water, unreasonableness of commute or excessive commute times
     - Rossmo discusses this on pg. 154 - 155
